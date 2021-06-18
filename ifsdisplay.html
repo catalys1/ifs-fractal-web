@@ -1,0 +1,233 @@
+<html>
+<head>
+</head>
+<body onload="startup();">
+<div class='col'>
+    <div class='row align-end'>
+        <!-- <button onclick="render_system(system);">Render</button> -->
+        <span style="padding-left:10px;">
+            <label for='iters'>Iterations</label>
+            <input id='iters' type='number' value=100000 min=0 max=500000 step=1000></input>
+        </span>
+    </div>
+    <div class='row'>
+        <canvas id="ifs-canvas" height='500' width='500'> </canvas>
+        <div class='col'>
+            <div class='header'>System parameters</div>
+            <div class='row'>
+                <input id='system-size' type='number' min=2 max=16 value=2></input>
+                <label for='system-size' style="padding-left:10px;">Number of transforms</label>
+            </div>
+            <div class='row'>
+                <input id='step-size' type='number' min='0.01' max='0.5' value='0.1' step='0.01'>
+                </input>
+                <label for='step-size' style="padding-left:10px;">Step size</label>
+            </div>
+            <div id='params' class='col'></div>
+            <button onclick="draw_random()">Random</button>
+        </div>
+    </div>
+    <div class='row'>
+        <canvas id='tform-canvas' width=500 height=250></canvas>
+    </div>
+</div>
+</body>
+
+<style>
+
+body {
+    display: flex;
+    flex-direction: column;
+}
+div {
+    margin: 5px;
+    display: flex;
+    flex-shrink: 1;
+}
+canvas {
+    border: 3px solid black;
+}
+button {
+    width: 100px;
+    height: 30px;
+}
+.row {
+    display: flex;
+    flex-direction: row;
+}
+.col {
+    display: flex;
+    flex-direction: column;
+}
+.align-end {
+    align-items: flex-end;
+}
+.header {
+    font-size: 120%;
+    font-weight: bold;
+    text-align: center;
+    align-content: center;
+    width: 100%;
+}
+.card {
+    flex-direction: column;
+    justify-content: flex-start;
+    align-content: flex-start;
+}
+
+</style>
+
+<script src=ifs.js></script>
+
+<script>
+
+// Global state
+var system = null;
+// -------------------------------------------------------
+
+function draw_random() {
+    var n = parseInt(document.getElementById('system-size').value);
+    system = get_ws(n);
+    display_params();
+    render_system(system);
+}
+
+function render_system(sys) {
+    var iters = document.getElementById('iters').value;
+    var points = iterate_ifs(sys, iters);
+    draw_points(points);
+}
+
+function matrix_card(mat) {
+    var card = document.createElement('div');
+    card.classList.add('col')
+    for (let i = 0; i < mat.length; i++) {
+        var row = document.createElement('span');
+        for (let j = 0; j < mat[i].length; j++) {
+            var cell = document.createElement('input');
+            cell.type = 'number';
+            cell.step = document.getElementById('step-size').value;
+            cell.value = mat[i][j].toPrecision(4);
+            let notlast = j < mat[i].length - 1;
+            cell.min = notlast ? '-1' : '-10';
+            cell.max = notlast ? '1' : '10'
+            cell.oninput = function(ev) {
+                let sys = read_text_params();
+                render_system(sys);
+            }
+            row.appendChild(cell);
+        }
+        card.appendChild(row);
+    }
+    return card;
+}
+
+function read_text_params() {
+    var container = document.getElementById('params');
+    var sys = [];
+    for (let i = 0; i < container.children.length; i++) {
+        var mat = [];
+        var mat_els = container.children[i];
+        for (let j = 0; j < mat_els.children.length; j++) {
+            var row = [];
+            let row_els = mat_els.children[j];
+            for (let k = 0; k < row_els.children.length; k++) {
+                let v = parseFloat(row_els.children[k].value);
+                row.push(v);
+            }
+            mat.push(row);
+        }
+        sys.push(mat);
+    }
+    return sys;
+}
+
+function display_params() {
+    var container = document.getElementById('params');
+    while (params.firstChild) {
+        container.removeChild(container.lastChild);
+    }
+    for (let i = 0; i < system.length; i++) {
+        let card = matrix_card(system[i]);
+        container.appendChild(card);
+    }
+}
+
+function draw_points(points, region=null) {
+    var can = document.getElementById('ifs-canvas');
+    var ctx = can.getContext('2d');
+
+    if (region === null)
+        region = minmax(points);
+
+    var w = can.width;
+    var h = can.height;
+    var ar = [];
+    for (let i = 0; i < h; i++) {
+        let r = [];
+        for (let j = 0; j < w; j++) {
+            r.push(0);
+        }
+        ar.push(r);
+    }
+    for (let i = 0; i < points.length; i++) {
+        let x = Math.floor((points[i][0] - region[0]) / (region[2]-region[0]) * (w-1));
+        let y = Math.floor((points[i][1] - region[1]) / (region[3]-region[1]) * (h-1));
+        if (x >= 0 && x < w && y >= 0 && y < h) {
+            ar[y][x] = 1;
+        }
+    }
+
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = 'black';
+    for (let i = 0; i < h; i++) {
+        for (let j = 0; j < w; j++) {
+            if (ar[i][j] == 1) {
+                ctx.fillRect(i, j, 1, 1);
+            }
+        }
+    }
+}
+
+function render_transforms() {
+    var can = document.getElementById('tform-canvas');
+    ctx = can.getContext('2d');
+
+    ctx.moveTo(250, 0);
+    ctx.lineTo(250, 250);
+    ctx.stroke();
+}
+
+function startup() {
+    system = [
+        [[0.5, -0.5, 0],
+         [0.5, 0.5,  0]],
+        [[-0.5, -0.5, 1],
+         [0.5, -0.5,  0]]
+    ];
+    display_params();
+
+    var stepper = document.getElementById('step-size');
+    stepper.oninput = function(ev) {
+        var new_step = stepper.value;
+        var container = document.getElementById('params');
+        for (let i = 0; i < container.children.length; i++) {
+            var mat_els = container.children[i];
+            for (let j = 0; j < mat_els.children.length; j++) {
+                let row_els = mat_els.children[j];
+                for (let k = 0; k < row_els.children.length; k++) {
+                    row_els.children[k].step = new_step;
+                }
+            }
+        }
+
+    }
+
+    render_system(system);
+    render_transforms();
+}
+
+</script>
+
+</html>
