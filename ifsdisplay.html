@@ -83,6 +83,11 @@ button {
 
 // Global state
 var system = null;
+var pView = {
+    cx: 0,
+    cy: 0,
+    z: 2
+};
 // -------------------------------------------------------
 
 function draw_random() {
@@ -194,9 +199,28 @@ function render_transforms() {
     var can = document.getElementById('tform-canvas');
     ctx = can.getContext('2d');
 
-    ctx.moveTo(250, 0);
-    ctx.lineTo(250, 250);
+    var can_w = can.width;
+    var can_h = can.height;
+
+    ctx.moveTo(can_w / 2, 0);
+    ctx.lineTo(can_w / 2, can_h);
     ctx.stroke();
+
+    var w = can_w / 2;
+    var h = can_h;
+    var cx = w / 2;
+    var cy = h / 2;
+
+    var bx = system[0][0][2];
+    var by = system[0][1][2];
+
+    var x = (bx + pView.cx) * w / pView.z + cx;
+    var y = (by + pView.cy) * h / pView.z + cy;
+
+    // draw
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2)
+    ctx.fill();
 }
 
 function startup() {
