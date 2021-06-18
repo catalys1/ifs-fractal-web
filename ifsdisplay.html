@@ -1,5 +1,6 @@
 <html>
 <head>
+    <link rel='stylesheet' href='stylesheet.css'>
 </head>
 <body onload="startup();">
 <div class='col'>
@@ -33,52 +34,8 @@
 </div>
 </body>
 
-<style>
-
-body {
-    display: flex;
-    flex-direction: column;
-}
-div {
-    margin: 5px;
-    display: flex;
-    flex-shrink: 1;
-}
-canvas {
-    border: 3px solid black;
-}
-button {
-    width: 100px;
-    height: 30px;
-}
-.row {
-    display: flex;
-    flex-direction: row;
-}
-.col {
-    display: flex;
-    flex-direction: column;
-}
-.align-end {
-    align-items: flex-end;
-}
-.header {
-    font-size: 120%;
-    font-weight: bold;
-    text-align: center;
-    align-content: center;
-    width: 100%;
-}
-.card {
-    flex-direction: column;
-    justify-content: flex-start;
-    align-content: flex-start;
-}
-
-</style>
-
 <script src=ifs.js></script>
-
+<script src=svd.js></script>
 <script>
 
 // Global state
@@ -101,6 +58,7 @@ function render_system(sys) {
     var iters = document.getElementById('iters').value;
     var points = iterate_ifs(sys, iters);
     draw_points(points);
+    render_transforms(system);
 }
 
 function matrix_card(mat) {
@@ -195,7 +153,15 @@ function draw_points(points, region=null) {
     }
 }
 
-function render_transforms() {
+function world_to_screen(x, y, w, h) {
+    var cx = w / 2;
+    var cy = h / 2;
+    var xw = (x + pView.cx) * w / 2 / pView.z + cx;
+    var yw = (y + pView.cy) * h / 2 / pView.z + cy;
+    return [xw, yw];
+}
+
+function render_transforms(sys) {
     var can = document.getElementById('tform-canvas');
     ctx = can.getContext('2d');
 
@@ -206,21 +172,37 @@ function render_transforms() {
     ctx.lineTo(can_w / 2, can_h);
     ctx.stroke();
 
-    var w = can_w / 2;
-    var h = can_h;
-    var cx = w / 2;
-    var cy = h / 2;
+    for (let i = 0; i < sys.length; i++) {
+        var w = can_w / 2;
+        var h = can_h;
 
-    var bx = system[0][0][2];
-    var by = system[0][1][2];
+        var svd = svd2x2(sys[i]);
+        var bx = sys[i][0][2];
+        var by = sys[i][1][2];
+        var xy = world_to_screen(bx, by, w, h);
 
-    var x = (bx + pView.cx) * w / pView.z + cx;
-    var y = (by + pView.cy) * h / pView.z + cy;
+        // draw
+        if (xy[0] >= 0 && xy[0] < w && xy[1] >= 0 && xy[1] < h) {
+            // translation
+            ctx.fillStyle = 'bllack';
+            ctx.beginPath();
+            ctx.arc(xy[0], xy[1], 3, 0, Math.PI * 2)
+            ctx.fill();
 
-    // draw
-    ctx.beginPath();
-    ctx.arc(x, y, 3, 0, Math.PI * 2)
-    ctx.fill();
+            ctx.fillStyle = 'red';
+            // left singular vectors (U)
+            xy = world_to_screen(bx + svd.U[0][0], by + svd.U[1][0], w, h);
+            ctx.beginPath();
+            ctx.arc(xy[0], xy[1], 3, 0, Math.PI * 2)
+            ctx.fill();
+            xy = world_to_screen(bx + svd.U[0][1], by + svd.U[1][1], w, h);
+            ctx.beginPath();
+            ctx.arc(xy[0], xy[1], 3, 0, Math.PI * 2)
+            ctx.fill();
+            // right singular vectors (V^T)
+        }
+            
+    }
 }
 
 function startup() {
@@ -249,7 +231,7 @@ function startup() {
     }
 
     render_system(system);
-    render_transforms();
+    render_transforms(system);
 }
 
 </script>
