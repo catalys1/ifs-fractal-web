@@ -1,4 +1,4 @@
-function get_ws(n=null, bval=1) {
+function randomSystem(n=null, bval=1) {
     if (n === null)
         n = [2, 5];
     if (Array.isArray(n)) {
@@ -37,7 +37,7 @@ function get_ws(n=null, bval=1) {
     return matrices;
 }
 
-function iterate_ifs(ws, n_iter) {
+function iterateIFS(ws, n_iter) {
     var dets = [];
     var ps = [];
     var total_sum = 0;
