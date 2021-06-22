@@ -1,7 +1,9 @@
 class ManipulateDisplay {
-    constructor(canvas) {
+    constructor(canvas, extRenderCallback) {
+        this.extRenderCallback = extRenderCallback;
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
+        canvas.style.cursor = 'pointer';
 
         this.width = canvas.width;
         this.height = canvas.height;
@@ -11,14 +13,45 @@ class ManipulateDisplay {
         this.cy = 0;
         this.z = 2;
         this.sys = null;
+        this.svd = null;
 
         // set up interactive
+        this.mouseState = {
+            // clicking
+            mousedown: false,
+            xdown: -1,          // coordinates of click
+            ydown: -1,
+            savex: 0.0,         // saved coordinates as needed
+            savey: 0.0,
+            // handles
+            onhandle: false,    // whether mouse is over a handle
+            handleclick: false, // whether handle was clicked
+            handleid: -1,       // ID of clicked handle
+        };
         var me = this;
         canvas.onmousemove = function(e) {
-            if (me.sys !== null) {
-                var xx = e.offsetX;
-                var yy = e.offsetY;
-                // var xy = me.screenToWorld(xx, yy);
+            var xx = e.offsetX;
+            var yy = e.offsetY;
+            if (me.mouseState.mousedown) {
+                // dragging
+                if (me.mouseState.handleclick) {
+                    let xy = me.screenToWorld(xx, yy);
+                    me.sys[me.mouseState.handleid][0][2] = xy[0];
+                    me.sys[me.mouseState.handleid][1][2] = -xy[1];
+                    me.extRenderCallback(me.sys);
+                }
+                else {
+                    let mxy = me.screenToWorld(me.mouseState.xdown, me.mouseState.ydown);
+                    let xy = me.screenToWorld(xx, yy);
+                    let dx = mxy[0] - xy[0];
+                    let dy = mxy[1] - xy[1];
+                    me.cx = me.mouseState.savex + dx;
+                    me.cy = me.mouseState.savey - dy;
+                }
+                me.update();
+            }
+            else if (me.sys !== null) {
+                // check for nearby handles
                 var mindist = me.width + me.height;
                 var minloc = -1;
                 for (let i = 0; i < me.sys.length; i++) {
@@ -31,10 +64,42 @@ class ManipulateDisplay {
                     }
                 }
                 if (mindist < 10) {
-                    console.log('Near to sys' + minloc);
+                    me.mouseState.onhandle = true;
+                    me.mouseState.handleid = minloc;
                 }
             }
         };
+        canvas.onmousedown = function(e) {
+            me.canvas.style.cursor = 'grabbing';
+            me.mouseState.mousedown = true;
+            var xx = e.offsetX;
+            var yy = e.offsetY;
+            me.mouseState.xdown = xx;
+            me.mouseState.ydown = yy
+            if (me.mouseState.onhandle) {
+                me.mouseState.handleclick = true;
+            }
+            else {
+                me.mouseState.savex = me.cx;
+                me.mouseState.savey = me.cy;
+            }
+        };
+        canvas.onmouseup = function(e) {
+            me.mouseState.onhandle = false;
+            me.mouseState.handleclick = false;
+            me.mouseState.mousedown = false;
+            me.mouseState.xdown = -1;
+            me.mouseState.ydown = -1;
+            me.mouseState.savex = 0;
+            me.mouseState.savey = 0;
+            me.canvas.style.cursor = 'pointer';
+        };
+        canvas.onwheel = function(e) {
+            e.preventDefault();
+            var delta = Math.sign(e.deltaY) * 0.25;
+            me.z += delta;
+            me.update();
+        }
     }
 
     worldToScreen(x, y) {
@@ -78,9 +143,9 @@ class ManipulateDisplay {
 
     drawCoordinates() {
         var ctx = this.ctx;
-        ctx.fillStyle = '#F5F5F5';
+        ctx.fillStyle = '#F2F2F2';
         ctx.strokeStyle = 'white';
-        var fsize = 10;
+        var fsize = 9;
         ctx.font = fsize.toString() + 'px Courier';
 
         var w = this.width;
@@ -98,7 +163,7 @@ class ManipulateDisplay {
             ctx.moveTo(0, v);
             ctx.lineTo(w, v);
             ctx.stroke();
-            let loc = this.cy + (i - ng / 2) * 2 * this.z / ng;
+            let loc = this.cy - (i - ng / 2) * 2 * this.z / ng;
             let loc_s = (loc > 0 ? '+' : loc == 0 ? ' ' : '') + loc.toFixed(2);
             ctx.fillText(loc_s, 2, v + 0.25*fsize);
 
@@ -109,13 +174,22 @@ class ManipulateDisplay {
             ctx.stroke();
             loc = this.cx + (i - ng / 2) * 2 * this.z / ng;
             loc_s = (loc > 0 ? '+' : loc == 0 ? ' ' : '') + loc.toFixed(2);
-            ctx.fillText(loc_s, u - 2*fsize, 2+fsize*(1 + (i+1) % 2));
+            ctx.fillText(loc_s, u - 2*fsize, 2+fsize);
         }
     }
 
-    showSystemDecomp(sys) {
-        this.sys = sys;
+    update(sys=null) {
         var ctx = this.ctx;
+
+        if (sys === null)
+            sys = this.sys;
+        else if (this.sys != sys) {
+            this.sys = sys;
+            this.svd = [];
+            for (let i = 0; i < this.sys.length; i++) {
+                this.svd.push(svd2x2(sys[i]));
+            }
+        }
 
         this.drawCoordinates();
 
@@ -127,7 +201,7 @@ class ManipulateDisplay {
         ctx.stroke();
 
         for (let i = 0; i < sys.length; i++) {
-            var svd = svd2x2(sys[i]);
+            var svd = this.svd[i];
             var s1 = svd.S[0];
             var s2 = svd.S[1];
             var bx = sys[i][0][2];

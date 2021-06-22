@@ -61,7 +61,7 @@ function renderFractal(sys) {
     var iters = document.getElementById('iters').value;
     var points = iterateIFS(sys, iters);
     drawPoints(points);
-    manipulator.showSystemDecomp(sys);
+    manipulator.update(sys);
 }
 
 function matrixCard(mat) {
@@ -108,13 +108,16 @@ function readTextParams() {
     return sys;
 }
 
-function displayParams() {
+function displayParams(sys=null) {
+    if (sys === null) {
+        sys = system;
+    }
     var container = document.getElementById('params');
     while (params.firstChild) {
         container.removeChild(container.lastChild);
     }
-    for (let i = 0; i < system.length; i++) {
-        let card = matrixCard(system[i]);
+    for (let i = 0; i < sys.length; i++) {
+        let card = matrixCard(sys[i]);
         container.appendChild(card);
     }
 }
@@ -156,113 +159,11 @@ function drawPoints(points, region=null) {
     }
 }
 
-// function worldToScreen(x, y, w, h) {
-//     var cx = w / 2;
-//     var cy = h / 2;
-//     var xw = (x + pView.cx) * w / 2 / pView.z + cx;
-//     var yw = -(y + pView.cy) * h / 2 / pView.z + cy;
-//     return [xw, yw];
-// }
-
-// function drawVec(x1, y1, x2, y2, ctx, color=null) {
-//     color = color === null ? 'black' : color;
-//     ctx.strokeStyle = color;
-//     ctx.beginPath();
-//     ctx.moveTo(x1, y1);
-//     ctx.lineTo(x2, y2);
-//     ctx.stroke();
-
-//     ctx.beginPath();
-//     ctx.arc(x2, y2, 5, 0, Math.PI * 2);
-//     ctx.stroke();
-// }
-
-// function drawOrigin(x, y, ctx, color=null) {
-//     color = color === null ? 'black' : color;
-//     ctx.strokeStyle = color;
-//     ctx.beginPath();
-//     ctx.arc(x, y, 7, 0, Math.PI * 2)
-//     ctx.stroke();
-// }
-
-// function drawCoordinates(w, h, ctx) {
-//     ctx.fillStyle = '#F5F5F5';
-//     ctx.strokeStyle = 'white';
-//     var fsize = 10;
-//     ctx.font = fsize.toString() + 'px Courier';
-
-//     ctx.fillRect(0, 0, w, h);
-//     ctx.fillStyle = 'black';
-
-//     var ng = 8;
-//     for (let i = 1; i < ng; i++) {
-//         let u = w * i / ng;
-//         let v = h * i / ng;
-
-//         // horizontal
-//         ctx.beginPath();
-//         ctx.moveTo(0, v);
-//         ctx.lineTo(w, v);
-//         ctx.stroke();
-//         let loc = pView.cy + (i - ng / 2) * 2 * pView.z / ng;
-//         let loc_s = (loc > 0 ? '+' : loc == 0 ? ' ' : '') + loc.toFixed(2);
-//         ctx.fillText(loc_s, 2, v + 0.25*fsize);
-
-//         // vertical
-//         ctx.beginPath();
-//         ctx.moveTo(u, 0);
-//         ctx.lineTo(u, h);
-//         ctx.stroke();
-//         loc = pView.cx + (i - ng / 2) * 2 * pView.z / ng;
-//         loc_s = (loc > 0 ? '+' : loc == 0 ? ' ' : '') + loc.toFixed(2);
-//         ctx.fillText(loc_s, u - 2*fsize, 2+fsize*(1 + (i+1) % 2));
-//     }
-// }
-
-// function showSystemDecomp(sys) {
-//     var can = document.getElementById('decomp-canvas');
-//     ctx = can.getContext('2d');
-
-//     var can_w = can.width;
-//     var can_h = can.height;
-
-//     drawCoordinates(can_w, can_h, ctx);
-
-//     ctx.moveTo(can_w, 0);
-//     ctx.lineTo(can_w, can_h);
-//     ctx.stroke();
-
-//     for (let i = 0; i < sys.length; i++) {
-//         var w = can_w;
-//         var h = can_h;
-
-//         var svd = svd2x2(sys[i]);
-//         var s1 = svd.S[0];
-//         var s2 = svd.S[1];
-//         var bx = sys[i][0][2];
-//         var by = sys[i][1][2];
-//         var bw = worldToScreen(bx, by, w, h);
-
-//         // draw
-//         if (bw[0] >= 0 && bw[0] < w && bw[1] >= 0 && bw[1] < h) {
-//             // left singular vectors (U)
-//             xy = worldToScreen(bx + svd.U[0][0] * s1, by + svd.U[1][0] * s2, w, h);
-//             drawVec(bw[0], bw[1], xy[0], xy[1], ctx, 'red');
-//             xy = worldToScreen(bx + svd.U[0][1] * s1, by + svd.U[1][1] * s2, w, h);
-//             drawVec(bw[0], bw[1], xy[0], xy[1], ctx, 'red');
-//             // right singular vectors (V^T)
-//             xy = worldToScreen(bx + svd.V[0][0], by + svd.V[1][0], w, h);
-//             drawVec(bw[0], bw[1], xy[0], xy[1], ctx, 'blue');
-//             xy = worldToScreen(bx + svd.V[0][1], by + svd.V[1][1], w, h);
-//             drawVec(bw[0], bw[1], xy[0], xy[1], ctx, 'blue');
-//             drawOrigin(bw[0], bw[1], ctx);
-//         }
-            
-//     }
-// }
-
 function startup() {
-    manipulator = new ManipulateDisplay(document.getElementById('decomp-canvas'));
+    manipulator = new ManipulateDisplay(document.getElementById('decomp-canvas'), function(sys) {
+        renderFractal(sys);
+        displayParams(sys);
+    });
     system = [
         [[0.5, -0.5, 0],
          [0.5, 0.5,  0]],
