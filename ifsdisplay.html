@@ -8,7 +8,7 @@
         <!-- <button onclick="renderFractal(system);">Render</button> -->
         <span style="padding-left:10px;">
             <label for='iters'>Iterations</label>
-            <input id='iters' type='number' value=100000 min=0 max=500000 step=1000></input>
+            <input id='iters' type='number' value=100000 min=0 max=500000 step=1000 oninput="renderFractal(system)"></input>
         </span>
     </div>
     <div class='row'>
@@ -26,7 +26,7 @@
         <div class='col'>
             <div class='header'>System parameters</div>
             <div class='row'>
-                <input id='system-size' type='number' min=2 max=16 value=2></input>
+                <input id='system-size' type='number' min=2 max=16 value=2 oninput='changeSystemSize()'></input>
                 <label for='system-size' style="padding-left:10px;">Number of transforms</label>
             </div>
             <div class='row'>
@@ -57,14 +57,19 @@ function sampleRandomSystem() {
     renderFractal(system);
 }
 
-function renderFractal(sys) {
+function renderFractal(sys, force=false) {
     var iters = document.getElementById('iters').value;
+    let t1 = performance.now();
     var points = iterateIFS(sys, iters);
+    let t2 = performance.now();
     drawPoints(points);
-    manipulator.update(sys);
+    let t3 = performance.now();
+    manipulator.update(sys, force);
+    // console.log('iterate(' + (t2-t1) + '), draw(' + (t3-t2) + ')'); 
 }
 
-function matrixCard(mat) {
+function createMatrixCard() {
+    var mat = [[1, 0, 0], [0, 1, 0]];
     var card = document.createElement('div');
     card.classList.add('col')
     for (let i = 0; i < mat.length; i++) {
@@ -73,10 +78,10 @@ function matrixCard(mat) {
             var cell = document.createElement('input');
             cell.type = 'number';
             cell.step = document.getElementById('step-size').value;
-            cell.value = mat[i][j].toPrecision(4);
             let notlast = j < mat[i].length - 1;
             cell.min = notlast ? '-1' : '-10';
             cell.max = notlast ? '1' : '10'
+            cell.value = mat[i][j].toPrecision(3);
             cell.oninput = function(ev) {
                 let sys = readTextParams();
                 renderFractal(sys);
@@ -86,6 +91,30 @@ function matrixCard(mat) {
         card.appendChild(row);
     }
     return card;
+}
+
+function updateMatrixCard(mat, card) {
+    for (let i = 0; i < mat.length; i++) {
+        var row = card.children[i];
+        for (let j = 0; j < mat[i].length; j++) {
+            var cell = row.children[j];
+            cell.value = mat[i][j].toPrecision(4);
+        }
+    }
+}
+
+function changeSystemSize() {
+    let n = parseInt(document.getElementById('system-size').value, 10);
+    let s = system.length;
+    if (n > s)
+        for (let i = s; i < n; i++) {
+            system.push([[1.0,0.0,0.0],[0.0,1.0,0.0]]);
+        }
+    else if (n < s)
+        for (let i = 0; i < s-n; i++)
+            system.pop();
+    displayParams();
+    renderFractal(system, true);
 }
 
 function readTextParams() {
@@ -113,13 +142,17 @@ function displayParams(sys=null) {
         sys = system;
     }
     var container = document.getElementById('params');
-    while (params.firstChild) {
-        container.removeChild(container.lastChild);
-    }
-    for (let i = 0; i < sys.length; i++) {
-        let card = matrixCard(sys[i]);
-        container.appendChild(card);
-    }
+    let nc = container.children.length;
+    if (nc > sys.length)
+        for (let i = sys.length; i < nc; i++)
+            container.removeChild(container.lastChild);
+    else if (nc < sys.length)
+        for (let i = nc; i < sys.length; i++) {
+            let card = createMatrixCard(sys[i]);
+            container.appendChild(card);
+        }
+    for (let i = 0; i < sys.length; i++)
+        updateMatrixCard(sys[i], container.children[i]);
 }
 
 function drawPoints(points, region=null) {
@@ -131,32 +164,47 @@ function drawPoints(points, region=null) {
 
     var w = can.width;
     var h = can.height;
-    var ar = [];
-    for (let i = 0; i < h; i++) {
-        let r = [];
-        for (let j = 0; j < w; j++) {
-            r.push(0);
-        }
-        ar.push(r);
-    }
+    ctx.clearRect(0, 0, w, h);
+    let id = ctx.getImageData(0 ,0, w, h);
+    let pix = id.data;
+
     for (let i = 0; i < points.length; i++) {
         let x = Math.floor((points[i][0] - region[0]) / (region[2]-region[0]) * (w-1));
         let y = Math.floor((points[i][1] - region[1]) / (region[3]-region[1]) * (h-1));
         if (x >= 0 && x < w && y >= 0 && y < h) {
-            ar[y][x] = 1;
+            // ar[y][x] = 1;
+            let k = (y*w + x)*4;
+            pix[k] = 0;
+            pix[k+1] = 0;
+            pix[k+2] = 0;
+            pix[k+3] = 255;
         }
     }
+    ctx.putImageData(id, 0, 0);
 
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = 'black';
-    for (let i = 0; i < h; i++) {
-        for (let j = 0; j < w; j++) {
-            if (ar[i][j] == 1) {
-                ctx.fillRect(i, j, 1, 1);
-            }
-        }
-    }
+    // coordinates of corners
+    let fsize = 9;
+    ctx.fillStyle = '#AAAAAA';
+    ctx.font = fsize.toString()+'px courier';
+    let p = 3;
+    let x1 = region[0].toPrecision(p);
+    let y1 = region[1].toPrecision(p);
+    let x2 = region[2].toPrecision(p);
+    let y2 = region[3].toPrecision(p);
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    let s = '('+x1+','+y1+')';
+    ctx.fillText(s, 2, 2);
+    s = '('+x2+','+y1+')';
+    ctx.textAlign = 'right';
+    ctx.fillText(s, w-2, 2);
+    s = '('+x1+','+y2+')';
+    ctx.textBaseline = 'bottom';
+    ctx.textAlign = 'left';
+    s = '('+x2+','+y2+')';
+    ctx.fillText(s, 2, h-2);
+    ctx.textAlign = 'right';
+    ctx.fillText(s, w-2, h-2);
 }
 
 function startup() {

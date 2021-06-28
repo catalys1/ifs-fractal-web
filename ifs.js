@@ -37,7 +37,7 @@ function randomSystem(n=null, bval=1) {
     return matrices;
 }
 
-function iterateIFS(ws, n_iter) {
+function iterateIFS(ws, n_iter, v0=null) {
     var dets = [];
     var ps = [];
     var total_sum = 0;
@@ -52,9 +52,15 @@ function iterateIFS(ws, n_iter) {
         ps[i] = ps[i-1] + ps[i] / total_sum;
     }
 
-    let s = 1 / (1 + dets[0] - ws[0][0][0] - ws[0][1][1]);
-    var x = s * ((1 - ws[0][1][1]) * ws[0][0][2] + ws[0][0][1] * ws[0][1][2]);
-    var y = s * ((1 - ws[0][0][0]) * ws[0][1][2] + ws[0][1][0] * ws[0][0][2]);
+    var x, y;
+    if (v0 === null) {
+        let s = 1 / (1 + dets[0] - ws[0][0][0] - ws[0][1][1]);
+        x = s * ((1 - ws[0][1][1]) * ws[0][0][2] + ws[0][0][1] * ws[0][1][2]);
+        y = s * ((1 - ws[0][0][0]) * ws[0][1][2] + ws[0][1][0] * ws[0][0][2]);
+    } else {
+        x = v0[0];
+        y = v0[0];
+    }
 
     var coords = [];
 
