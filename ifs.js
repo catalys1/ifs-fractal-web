@@ -21,11 +21,15 @@ function randomSystem(n=null, bval=1) {
             var s = Math.sin(angle);
             var c = Math.cos(angle);
 
-            var rmat = [[c * x1, s * x1], [-s * x2, c * x2]];
+            var rmat = [[c * x1, -s * x2], [s * x1, c * x2]];
             uv.push(rmat);
         }
         let u = uv[0];
         let v = uv[1];
+
+        // console.log(u);
+        // console.log([sv1, sv2]);
+        // console.log(v);
         
         var m = [
             [u[0][0]*sv1*v[0][0] + u[0][1]*sv2*v[1][0], u[0][0]*sv1*v[0][1] + u[0][1]*sv2*v[1][1], b1],
