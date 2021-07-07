@@ -4,8 +4,8 @@
 </head>
 <body onload="startup();">
 <div class='col'>
+
     <div class='row align-end'>
-        <!-- <button onclick="renderFractal(system);">Render</button> -->
         <span style="padding-left:10px;">
             <label for='iters'>Iterations</label>
             <input id='iters' type='number' value=100000 min=0 max=500000 step=1000 oninput="renderFractal(system)"></input>
@@ -18,11 +18,12 @@
         <div>
             <canvas id='decomp-canvas' width=400 height=400></canvas>
         </div>
+        <div>
+            <canvas id='info-canvas' class='no-border' width=400 height=400></canvas>
+        </div>
     </div>
+
     <div class='row'>
-        <!-- <div>
-            <canvas id='tform-canvas' width=400 height=400></canvas>
-        </div> -->
         <div class='col'>
             <div class='header'>System parameters</div>
             <div class='row'>
@@ -86,6 +87,7 @@ function renderFractal(sys, force=false) {
     drawPoints(points);
     let t3 = performance.now();
     manipulator.update(sys, force);
+    showSystemInfo(system);
     // console.log('iterate(' + (t2-t1) + '), draw(' + (t3-t2) + ')'); 
 }
 
@@ -226,6 +228,41 @@ function drawPoints(points, region=null) {
     ctx.fillText(s, 2, h-2);
     ctx.textAlign = 'right';
     ctx.fillText(s, w-2, h-2);
+}
+
+function showSystemInfo(sys=null) {
+    if (sys === null) sys = system;
+    var can = document.getElementById('info-canvas');
+    var ctx = can.getContext('2d');
+    ctx.font = '10px courier';
+    ctx.fillStyle = 'black';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+
+    ctx.clearRect(0, 0, can.width, can.height);
+
+    let xoff = 5, yoff = 5, xspace = 75, yspace = 20;
+
+    ctx.fillText('Sigma1', xoff, yoff);
+    ctx.fillText('Sigma2', xoff+xspace, yoff);
+    ctx.fillText('det', xoff+2*xspace, yoff);
+
+    ctx.beginPath();
+    ctx.moveTo(0, yoff+yspace*2/3);
+    ctx.lineTo(can.width, yoff+yspace*2/3);
+    ctx.stroke();
+    
+    var ssum = 0;
+    for (let i = 0; i < sys.length; i++) {
+        let svd = manipulator.svd[i];
+        let y = yoff+(i+1)*yspace;
+        ctx.fillText(svd.S[0].toPrecision(6), xoff, y);
+        ctx.fillText(svd.S[1].toPrecision(6), xoff+xspace, y);
+        ctx.fillText(det2x2(sys[i]).toPrecision(6), xoff+2*xspace, y);
+        ssum += svd.S[0] + svd.S[1];
+    }
+
+    ctx.fillText(ssum.toPrecision(8), xoff, yoff + (sys.length + 2) * yspace)
 }
 
 function startup() {
