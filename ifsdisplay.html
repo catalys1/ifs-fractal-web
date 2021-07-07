@@ -37,6 +37,10 @@
             <div id='params' class='col'></div>
             <button onclick="sampleRandomSystem()">Random</button>
         </div>
+        <div class='col'>
+            <textarea id='entry-field' name='entry-field' cols="50" rows="12" placeholder="Enter a system"></textarea>
+            <button id='submit-system' onclick="formSubmitSystem()">Submit</button>
+        </div>
     </div>
 </div>
 </body>
@@ -55,6 +59,23 @@ function sampleRandomSystem() {
     system = randomSystem(n);
     displayParams();
     renderFractal(system);
+}
+
+function formSubmitSystem() {
+    let text = document.getElementById('entry-field').value;
+    try {
+        let sys = JSON.parse(text);
+        if (sys.length < 2) throw new SyntaxError('Not enough transforms');
+        for (let i = 0; i < sys.length; i++) {
+            if (sys[i].length !== 2 || sys[i][0].length !== 3 || sys[i][1].length !== 3)
+                throw new SyntaxError('System must consist only of 3x2 matrices');
+        }
+        system = sys;
+        document.getElementById('system-size').value = system.length;
+        changeSystemSize();
+    } catch (SyntaxError) {
+        console.log('Input was not a valid system');
+    }
 }
 
 function renderFractal(sys, force=false) {
