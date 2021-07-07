@@ -463,6 +463,11 @@ function getColumn(m, i) {
     return [m[0][i], m[1][i]];
 }
 
+function det2x2(m) {
+    // determinant of 2x2 matrix
+    return m[0][0] * m[1][1] - m[0][1] * m[1][0];
+}
+
 function isvd(svd) {
     let U = svd.U;
     let S = svd.S;
