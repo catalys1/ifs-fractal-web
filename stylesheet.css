@@ -10,6 +10,9 @@ div {
 canvas {
     border: 2px solid black;
 }
+canvas.no-border {
+    border: 0px solid white;
+}
 button {
     width: 99px;
     height: 29px;
