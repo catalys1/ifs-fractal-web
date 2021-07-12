@@ -7,7 +7,7 @@ function randomSystem(n=null, bval=1) {
 
     var matrices = [];
     for (let i=0; i<n; i++) {
-        var sv1 = (Math.random() + 1) * 0.5;
+        var sv1 = (Math.random() *0.45) + 0.5
         var sv2 = Math.random() * (sv1 - 0.1) + 0.1;
         var b1 = (Math.random() - 0.5) * 2 * bval;
         var b2 = (Math.random() - 0.5) * 2 * bval;
@@ -41,7 +41,7 @@ function randomSystem(n=null, bval=1) {
     return matrices;
 }
 
-function iterateIFS(ws, n_iter, v0=null) {
+function iterateIFS(ws, n_iter, probs='det', v0=null) {
     var dets = [];
     var ps = [];
     var total_sum = 0;
@@ -51,9 +51,14 @@ function iterateIFS(ws, n_iter, v0=null) {
         ps.push(Math.abs(det));
         total_sum += ps[i];
     }
-    ps[0] /= total_sum;
-    for (let i = 1; i < ws.length; i++) {
-        ps[i] = ps[i-1] + ps[i] / total_sum;
+    if (probs==='det') {
+        ps[0] /= total_sum;
+        for (let i = 1; i < ws.length; i++)
+            ps[i] = ps[i-1] + ps[i] / total_sum;
+    }
+    else if (probs==='uniform') {
+        for (let i = 0; i < ws.length; i++)
+            ps[i] = (i+1) / ws.length;
     }
 
     var x, y;
