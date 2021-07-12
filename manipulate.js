@@ -63,12 +63,18 @@ class ManipulateDisplay {
                 var mindist = me.width + me.height;
                 var minloc = -1;
                 for (let i = 0; i < me.handles.length; i++) {
-                    let ss = me.handles[i].loc;
+                    let hand = me.handles[i];
+                    let ss = hand.loc;
                     let xy = me.worldToScreen(ss[0], ss[1]);
                     let d = Math.hypot(xx - xy[0], yy - xy[1]);
                     if (d < mindist) {
                         mindist = d;
                         minloc = i;
+                    } else if (d === mindist) {
+                        if (e.shiftKey && hand.param[0] !== 'T' && hand.param[1] === '2') {
+                            mindist = d;
+                            minloc = i;
+                        }
                     }
                 }
                 if (mindist <= me.handleTol && me.mouseState.handleid != minloc) {
@@ -153,21 +159,26 @@ class ManipulateDisplay {
                 let ov = vecSub(other.loc, base.loc);
                 let sigother = vecNorm(ov);
                 let max = isU ? 1 : sigother;
-                let min = isU ? sigother : 0.01;
+                let min = isU ? sigother : 0.00;
                 let mousev = vecSub([x, y], base.loc);
-                let d = vecInner(mousev, hv) / vecNorm(hv);
+                let nrm = vecNorm(hv);
+                let d = vecInner(mousev, hv);
+                if (nrm > 0)
+                    d /= nrm;
                 d = d > max ? max : d;
                 d = d < min ? min : d;
-                hd.loc = vecAddScaled(base.loc, hv, d / vecNorm(hv));
+                hd.loc = vecAddScaled(base.loc, hv, d / (nrm > 0 ? nrm : 1));
                 other = this.handles[handleId - 1];
                 ov = vecSub(other.loc, base.loc);
-                other.loc = vecAddScaled(base.loc, ov, d / vecNorm(ov));
+                nrm = vecNorm(ov);
+                other.loc = vecAddScaled(base.loc, ov, d / (nrm > 0 ? nrm : 1));
             }
         } else {
             // rotate handles around their base
             let ref = this.handles[hd.ref];
             let xy = vecSub(loc, ref.loc);
             let mxy = vecSub([x, y], ref.loc);
+            if ((xy[0] === 0 && xy[1] === 0) || (mxy[0] === 0 && mxy[1] === 0)) return;
             let theta = angleBetween(xy, mxy);
             for (let i = 0; i < this.handles.length; i++) {
                 let hh = this.handles[i];
@@ -202,9 +213,11 @@ class ManipulateDisplay {
                     } else if (hh.param === 'V1') {
                         svd.S[1] = d;
                     }
-                    v = vecScale(v, 1 / d);
-                    svd[p][0][k] = v[0];
-                    svd[p][1][k] = v[1];
+                    if (d > 0) {
+                        v = vecScale(v, 1 / d);
+                        svd[p][0][k] = v[0];
+                        svd[p][1][k] = v[1];
+                    }
                 }
             }
             let m = isvd(svd);
@@ -461,6 +474,26 @@ function vecInner(v1, v2) {
 function getColumn(m, i) {
     // return the ith column of matrix m as a vector
     return [m[0][i], m[1][i]];
+}
+
+function matmul(m1, m2) {
+    // multiply two 2x2 matrices
+    return [[
+        m1[0][0] * m2[0][0] + m1[0][1] * m2[1][0],
+        m1[0][0] * m2[0][1] + m1[0][1] * m2[1][1],
+        ],[
+        m1[1][0] * m2[0][0] + m1[1][1] * m2[1][0],
+        m1[1][0] * m2[0][1] + m1[1][1] * m2[1][1],
+    ]];
+}
+
+function inv(m) {
+    // 2x2 matrix inverse (assumes full rank)
+    let det = det2x2(m);
+    return [
+        [-m[1][1] * det, m[0][1] * det],
+        [m[1][0] * det, -m[0][0] * det]
+    ];
 }
 
 function det2x2(m) {
