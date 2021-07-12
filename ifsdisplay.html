@@ -10,6 +10,20 @@
             <label for='iters'>Iterations</label>
             <input id='iters' type='number' value=100000 min=0 max=500000 step=1000 oninput="renderFractal(system)"></input>
         </span>
+        <span style="padding-left:10px;">
+            <label for='probs'>Probabilities:</label>
+            <select id='probs' name='probs' oninput="renderFractal(system)">
+                <option value='det'>Determinant</option>
+                <option value='uniform'>Uniform</option>
+            </select>
+        </span>
+        <span style="padding-left:10px;">
+            <label for='systems'>Probabilities:</label>
+            <select id='systems' name='systems' oninput="predefinedSystem(null)">
+                <option value='dragon'>Dragon</option>
+                <option value='fern'>Fern</option>
+            </select>
+        </span>
     </div>
     <div class='row'>
         <div>
@@ -52,14 +66,35 @@
 
 // Global state
 var system = null;
+var fillRate = 0;
 var manipulator;
 // -------------------------------------------------------
+// Predefined systems
+var predefined = {
+    dragon: [[[0.5, -0.5, 0], [0.5, 0.5,  0]],
+            [[-0.5, -0.5, 1], [0.5, -0.5,  0]]],
+    fern:   [[[0, 0, 0], [0, 0.25, -0.4]],
+            [[0.95, 0.005, -0.002], [-0.005, 0.93, 0.5]],
+            [[0.035, -0.2, -0.09], [0.16, 0.04, 0.02]],
+            [[-0.04, 0.2, 0.083], [0.16, 0.04, 0.12]]],
+}
 
 function sampleRandomSystem() {
     var n = parseInt(document.getElementById('system-size').value);
     system = randomSystem(n);
     displayParams();
     renderFractal(system);
+}
+
+function predefinedSystem(name=null) {
+    if (name === null) {
+        name = document.getElementById('systems').value;
+    }
+    if (predefined.hasOwnProperty(name)) {
+        system = predefined[name];
+        displayParams();
+        renderFractal(system);
+    }
 }
 
 function formSubmitSystem() {
@@ -81,8 +116,9 @@ function formSubmitSystem() {
 
 function renderFractal(sys, force=false) {
     var iters = document.getElementById('iters').value;
+    var probs = document.getElementById('probs').value;
     let t1 = performance.now();
-    var points = iterateIFS(sys, iters);
+    var points = iterateIFS(sys, iters, probs=probs);
     let t2 = performance.now();
     drawPoints(points);
     let t3 = performance.now();
@@ -191,18 +227,23 @@ function drawPoints(points, region=null) {
     let id = ctx.getImageData(0 ,0, w, h);
     let pix = id.data;
 
+    var count = 0;
     for (let i = 0; i < points.length; i++) {
         let x = Math.floor((points[i][0] - region[0]) / (region[2]-region[0]) * (w-1));
         let y = Math.floor((points[i][1] - region[1]) / (region[3]-region[1]) * (h-1));
         if (x >= 0 && x < w && y >= 0 && y < h) {
             // ar[y][x] = 1;
             let k = (y*w + x)*4;
-            pix[k] = 0;
-            pix[k+1] = 0;
-            pix[k+2] = 0;
-            pix[k+3] = 255;
+            if (pix[k+3] === 0) {
+                count++;
+                pix[k] = 0;
+                pix[k+1] = 0;
+                pix[k+2] = 0;
+                pix[k+3] = 255;
+            }
         }
     }
+    fillRate = count / (w*h);
     ctx.putImageData(id, 0, 0);
 
     // coordinates of corners
@@ -262,7 +303,10 @@ function showSystemInfo(sys=null) {
         ssum += svd.S[0] + svd.S[1];
     }
 
-    ctx.fillText(ssum.toPrecision(8), xoff, yoff + (sys.length + 2) * yspace)
+    ctx.fillText('\u03A3_sigmas = '+ssum.toPrecision(8), 
+                 xoff, yoff + (sys.length + 2) * yspace)
+    ctx.fillText('Fill rate: ' + fillRate.toPrecision(8),
+                 xoff, yoff + (sys.length + 3) * yspace)
 }
 
 function startup() {
@@ -270,12 +314,7 @@ function startup() {
         renderFractal(sys);
         displayParams(sys);
     });
-    system = [
-        [[0.5, -0.5, 0],
-         [0.5, 0.5,  0]],
-        [[-0.5, -0.5, 1],
-         [0.5, -0.5,  0]]
-    ];
+    system = predefined.fern;
     displayParams();
 
     var stepper = document.getElementById('step-size');
