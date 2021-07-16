@@ -59,7 +59,7 @@ class ManipulateDisplay {
                 }
             }
             else if (me.sys !== null) {
-                // check for nearby handles
+                // find the handle nearest to the mouse
                 var mindist = me.width + me.height;
                 var minloc = -1;
                 for (let i = 0; i < me.handles.length; i++) {
@@ -70,8 +70,11 @@ class ManipulateDisplay {
                     if (d < mindist) {
                         mindist = d;
                         minloc = i;
-                    } else if (d === mindist) {
+                    } else if (d === mindist) {  // multiple handles are sitting on top of each other
                         if (e.shiftKey && hand.param[0] !== 'T' && hand.param[1] === '2') {
+                            mindist = d;
+                            minloc = i;
+                        } else if (!e.shiftKey && hand.param[0] === 'T') {
                             mindist = d;
                             minloc = i;
                         }
@@ -152,6 +155,7 @@ class ManipulateDisplay {
                 let ref = this.handles[hd.ref];
                 hd.loc = vecAddScaled(ref.loc, vecSub(loc, ref.loc), -1);
             } else {
+                // change the handle length (distance from the base)
                 let isU = hd.param[0] === 'U';
                 let base = this.handles[hd.ref];
                 let hv = vecSub(hd.loc, base.loc);
@@ -159,7 +163,7 @@ class ManipulateDisplay {
                 let ov = vecSub(other.loc, base.loc);
                 let sigother = vecNorm(ov);
                 let max = isU ? 1 : sigother;
-                let min = isU ? sigother : 0.00;
+                let min = isU ? sigother : 0.01;
                 let mousev = vecSub([x, y], base.loc);
                 let nrm = vecNorm(hv);
                 let d = vecInner(mousev, hv);
