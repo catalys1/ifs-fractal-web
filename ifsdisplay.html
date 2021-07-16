@@ -19,7 +19,7 @@
         </span>
         <span style="padding-left:10px;">
             <label for='systems'>Predefined system:</label>
-            <select id='systems' name='systems' oninput="predefinedSystem(null)">
+            <select id='systems' name='systems' onclick="predefinedSystem(null)">
                 <option value='dragon'>Dragon</option>
                 <option value='fern'>Fern</option>
             </select>
@@ -73,8 +73,7 @@ var manipulator;
 var predefined = {
     dragon: [[[0.5, -0.5, 0], [0.5, 0.5,  0]],
             [[-0.5, -0.5, 1], [0.5, -0.5,  0]]],
-    fern:   [[[0, 0, 0], [0, 0.25, -0.4]],
-            [[0.95, 0.005, -0.002], [-0.005, 0.93, 0.5]],
+    fern:   [[[0.95, 0.005, -0.002], [-0.005, 0.93, 0.5]],
             [[0.035, -0.2, -0.09], [0.16, 0.04, 0.02]],
             [[-0.04, 0.2, 0.083], [0.16, 0.04, 0.12]]],
 }
@@ -212,6 +211,7 @@ function displayParams(sys=null) {
         }
     for (let i = 0; i < sys.length; i++)
         updateMatrixCard(sys[i], container.children[i]);
+    document.getElementById('system-size').value = sys.length;
 }
 
 function drawPoints(points, region=null) {
@@ -293,20 +293,30 @@ function showSystemInfo(sys=null) {
     ctx.lineTo(can.width, yoff+yspace*2/3);
     ctx.stroke();
     
-    var ssum = 0;
+    var mrps = 0;
+    var ms1 = 0;
+    var ms2 = 0;
     for (let i = 0; i < sys.length; i++) {
         let svd = manipulator.svd[i];
         let y = yoff+(i+1)*yspace;
         ctx.fillText(svd.S[0].toPrecision(6), xoff, y);
         ctx.fillText(svd.S[1].toPrecision(6), xoff+xspace, y);
         ctx.fillText(det2x2(sys[i]).toPrecision(6), xoff+2*xspace, y);
-        ssum += svd.S[0] + svd.S[1];
+        let rps = Math.sqrt(svd.S[0] * svd.S[1])
+        mrps += rps;
+        ms1 += svd.S[0];
+        ms2 += svd.S[1];
     }
+    mrps = mrps / sys.length;
+    ms1 = ms1 / sys.length;
+    ms2 = ms2 / sys.length;
 
-    ctx.fillText('\u03A3_sigmas = '+ssum.toPrecision(8), 
-                 xoff, yoff + (sys.length + 2) * yspace)
+    ctx.fillText('MRPS = '+mrps.toPrecision(6), 
+                 xoff, yoff + (sys.length + 2) * yspace);
+    ctx.fillText('MS1-MS2 = '+(ms1-ms2).toPrecision(6)+' = '+ms1.toPrecision(6)+' - '+ms2.toPrecision(6),
+                 xoff, yoff + (sys.length + 3) * yspace);
     ctx.fillText('Fill rate: ' + fillRate.toPrecision(8),
-                 xoff, yoff + (sys.length + 3) * yspace)
+                 xoff, can.height-yspace);
 }
 
 function startup() {
@@ -315,6 +325,7 @@ function startup() {
         displayParams(sys);
     });
     system = predefined.fern;
+    document.getElementById('systems').value = 'fern';
     displayParams();
 
     var stepper = document.getElementById('step-size');
