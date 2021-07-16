@@ -7,7 +7,7 @@ function randomSystem(n=null, bval=1) {
 
     var matrices = [];
     for (let i=0; i<n; i++) {
-        var sv1 = (Math.random() *0.45) + 0.5
+        var sv1 = (Math.random() * (0.99-0.25)) + 0.25
         var sv2 = Math.random() * (sv1 - 0.1) + 0.1;
         var b1 = (Math.random() - 0.5) * 2 * bval;
         var b2 = (Math.random() - 0.5) * 2 * bval;
