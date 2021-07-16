@@ -1,0 +1,115 @@
+<html>
+<head>
+    <link rel='stylesheet' href='stylesheet.css'>
+    <style>
+        img {
+            margin: 5;
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body onload="startup();">
+<div class='col'>
+
+    <div id='bar' class='row'>
+        <label for='label'>Label: </label>
+        <select id='labels' label='label' style='padding-left: 10px'>
+            <option value='blurry'>Blurry</option>
+            <option value='crisp'>Crisp</option>
+        </select>
+    </div>
+    <div id='viewpane' class='row' style="flex-wrap: wrap;"> </div>
+    <div style='display: none'>
+        <canvas id='drawer' width='256' height='256'></canvas>
+    </div>
+</div>
+</body>
+
+<script src='ifs.js'></script>
+
+<script>
+
+var systems = [];
+var images = [];
+var labels = [];
+
+function startup() {
+    for (let i = 0; i < 500; i++) {
+        let params = randomSystem();
+        systems.push(params);
+        labels.push(-1);
+    }
+
+    for (let i = 0; i < systems.length; i++) {
+        let img = renderFractalImage(systems[i]);
+        images.push(img);
+        let imgEl = document.createElement('img');
+        imgEl.src = img;
+        imgEl.style = 'width: 128; height: 128';
+        imgEl.onclick = imgClick;
+        imgEl.idx = i;
+        document.getElementById('viewpane').appendChild(imgEl);
+    }
+}
+
+function renderFractalImage(sys) {
+    let can = document.getElementById('drawer');
+    let ctx = can.getContext('2d');
+
+
+    var points = iterateIFS(sys, 50000);
+    var region = minmax(points);
+
+    var w = can.width;
+    var h = can.height;
+    ctx.clearRect(0, 0, w, h);
+    let id = ctx.getImageData(0 ,0, w, h);
+    let pix = id.data;
+
+    var count = 0;
+    for (let i = 0; i < points.length; i++) {
+        let x = Math.floor((points[i][0] - region[0]) / (region[2]-region[0]) * (w-1));
+        let y = Math.floor((points[i][1] - region[1]) / (region[3]-region[1]) * (h-1));
+        if (x >= 0 && x < w && y >= 0 && y < h) {
+            // ar[y][x] = 1;
+            let k = (y*w + x)*4;
+            if (pix[k+3] === 0) {
+                count++;
+                pix[k] = 0;
+                pix[k+1] = 0;
+                pix[k+2] = 0;
+                pix[k+3] = 255;
+            }
+        }
+    }
+    ctx.putImageData(id, 0, 0);
+    var imgData = can.toDataURL();
+    return imgData;
+}
+
+function imgClick(event) {
+    let label = document.getElementById('labels').value;
+    let el = event.srcElement;
+    el.style.borderColor = label == 'blurry' ? 'red' : 'green';
+    el.style.borderWidth = 3;
+    idx = el.idx;
+    labels[idx] = label == 'blurry' ? 0 : 1;
+}
+
+function download() {
+    let obj = {
+        sys: systems,
+        labels: labels
+    }
+    obj = JSON.stringify(obj);
+
+    let a = document.createElement('a');
+    let f = new Blob([obj], {type: 'text/json'});
+    a.href = URL.createObjectURL(f);
+    a.download = 'label-result.json';
+    a.click();
+}
+
+
+</script>
+</html>
