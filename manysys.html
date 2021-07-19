@@ -6,19 +6,48 @@
             margin: 5;
             border: 1px solid black;
         }
+        span.small-gap {
+            margin-right: 10px;
+        }
+        span.gap {
+            margin-right: 20px;
+        }
+        span.large-gap {
+            margin-right: 30px;
+        }
+        div.bar {
+            display: flex;
+            font-size: large;
+            position: fixed;
+            background-color: white;
+            align-items: center;
+        }
     </style>
 </head>
 <body onload="startup();">
 <div class='col'>
 
-    <div id='bar' class='row'>
-        <label for='label'>Label: </label>
-        <select id='labels' label='label' style='padding-left: 10px'>
+    <div id='bar' class='row bar'>
+        <label for='label'>Label: </label><span class='small-gap'></span>
+        <select id='labels' label='label'>
             <option value='blurry'>Blurry</option>
             <option value='crisp'>Crisp</option>
         </select>
+        <span class='gap'></span>
+        <label for="system-size">System size:</label><span class='small-gap'></span>
+        <input name='system-size' id='system-size' type='number' value=2 min=2 max=10 style="width: 4em"/>
+        <span class='gap'></span>
+        <label for="s1min">&#963;&#8321; min:</label><span class='small-gap'></span>
+        <input name='s1min' id='s1min' type='number' value="0.5" min="0.2" max="1" step="0.05" style="width: 4em"/>
+        <span class='gap'></span>
+        <label for="s2min">&#963;&#8322; min:</label><span class='small-gap'></span>
+        <input name='s2min' id='s2min' type='number' value="0.2" min="0.1" max="0.5" step="0.05" style="width: 4em"/>
+        <span class='large-gap'></span>
+        <button onclick="addImages(100)">Add Images</button>
+        <span class='gap'></span>
+        <button onclick='download()'>Download</button>
     </div>
-    <div id='viewpane' class='row' style="flex-wrap: wrap;"> </div>
+    <div id='viewpane' class='row' style="flex-wrap: wrap; margin-top: 30px;"> </div>
     <div style='display: none'>
         <canvas id='drawer' width='256' height='256'></canvas>
     </div>
@@ -33,23 +62,33 @@ var systems = [];
 var images = [];
 var labels = [];
 
-function startup() {
-    for (let i = 0; i < 500; i++) {
-        let params = randomSystem();
+async function addImages(n=100, chunk=10, idx=0) {
+    let size = parseFloat(document.getElementById('system-size').value);
+    let s1min = parseFloat(document.getElementById('s1min').value);
+    let s2min = parseFloat(document.getElementById('s2min').value);
+    var i;
+    for (i = 0; i < chunk; i++) {
+        if (i >= n) break;
+        let params = randomSystem(size, 1, s1min, s2min);
         systems.push(params);
         labels.push(-1);
-    }
-
-    for (let i = 0; i < systems.length; i++) {
-        let img = renderFractalImage(systems[i]);
+        let img = renderFractalImage(params);
         images.push(img);
         let imgEl = document.createElement('img');
         imgEl.src = img;
         imgEl.style = 'width: 128; height: 128';
         imgEl.onclick = imgClick;
-        imgEl.idx = i;
+        imgEl.idx = systems.length - 1;
         document.getElementById('viewpane').appendChild(imgEl);
     }
+    if (i < n) {
+        await new Promise(r => setTimeout(r, 5))
+        addImages(n-chunk, chunk, idx+1);
+    }
+}
+
+function startup() {
+    addImages();
 }
 
 function renderFractalImage(sys) {
@@ -91,7 +130,8 @@ function imgClick(event) {
     let label = document.getElementById('labels').value;
     let el = event.srcElement;
     el.style.borderColor = label == 'blurry' ? 'red' : 'green';
-    el.style.borderWidth = 3;
+    // el.style.borderWidth = 3;
+    el.style.backgroundColor = label == 'blurry' ? 'red' : 'green';
     idx = el.idx;
     labels[idx] = label == 'blurry' ? 0 : 1;
 }
