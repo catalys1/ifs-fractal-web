@@ -1,4 +1,4 @@
-function randomSystem(n=null, bval=1) {
+function randomSystem(n=null, bval=1, sv1min=0.25, sv2min=0.1) {
     if (n === null)
         n = [2, 5];
     if (Array.isArray(n)) {
@@ -7,8 +7,8 @@ function randomSystem(n=null, bval=1) {
 
     var matrices = [];
     for (let i=0; i<n; i++) {
-        var sv1 = (Math.random() * (0.99-0.25)) + 0.25
-        var sv2 = Math.random() * (sv1 - 0.1) + 0.1;
+        var sv1 = (Math.random() * (0.99 - sv1min)) + sv1min;
+        var sv2 = Math.random() * (sv1 - sv2min) + sv2min;
         var b1 = (Math.random() - 0.5) * 2 * bval;
         var b2 = (Math.random() - 0.5) * 2 * bval;
 
