@@ -21,6 +21,29 @@
             position: fixed;
             background-color: white;
             align-items: center;
+            z-index: 2;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 20px;
+            background-color: black;
+            opacity: 0.75;
+            color: #fff;
+            font-size: smaller;
+            text-align: center;
+            padding: 2px 0;
+            border-radius: 5px;
+            position: absolute;
+            left: 5px;
+            top: 5px;
+            z-index: 1;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
         }
     </style>
 </head>
@@ -62,6 +85,27 @@ var systems = [];
 var images = [];
 var labels = [];
 
+function createImageElement(img, idx) {
+    // Outer div
+    let div = document.createElement('div');
+    div.classList.add('tooltip');
+    div.style.margin = '0';
+    // The image element
+    let imgEl = document.createElement('img');
+    imgEl.src = img;
+    imgEl.style = 'width: 128; height: 128';
+    imgEl.onclick = imgClick;
+    imgEl.idx = idx;
+    // Tooltiptext span
+    let tt = document.createElement('span');
+    tt.classList.add('tooltiptext');
+    tt.innerHTML = idx;
+    div.appendChild(imgEl);
+    div.appendChild(tt);
+    // Add to the container div
+    document.getElementById('viewpane').appendChild(div);
+}
+
 async function addImages(n=100, chunk=10, idx=0) {
     let size = parseFloat(document.getElementById('system-size').value);
     let s1min = parseFloat(document.getElementById('s1min').value);
@@ -74,12 +118,7 @@ async function addImages(n=100, chunk=10, idx=0) {
         labels.push(-1);
         let img = renderFractalImage(params);
         images.push(img);
-        let imgEl = document.createElement('img');
-        imgEl.src = img;
-        imgEl.style = 'width: 128; height: 128';
-        imgEl.onclick = imgClick;
-        imgEl.idx = systems.length - 1;
-        document.getElementById('viewpane').appendChild(imgEl);
+        createImageElement(img, systems.length - 1);
     }
     if (i < n) {
         await new Promise(r => setTimeout(r, 5))
@@ -88,7 +127,7 @@ async function addImages(n=100, chunk=10, idx=0) {
 }
 
 function startup() {
-    addImages();
+    // addImages();
 }
 
 function renderFractalImage(sys) {
