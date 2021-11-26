@@ -24,6 +24,13 @@
                 <option value='fern'>Fern</option>
             </select>
         </span>
+        <span style="padding-left:10px;">
+            <label for='color'>Color:</label>
+            <select id='color' name='color' onclick="renderFractal(system)">
+                <option value='black'>Black</option>
+                <option value='white'>White</option>
+            </select>
+        </span>
     </div>
     <div class='row'>
         <div>
@@ -116,10 +123,11 @@ function formSubmitSystem() {
 function renderFractal(sys, force=false) {
     var iters = document.getElementById('iters').value;
     var probs = document.getElementById('probs').value;
+    let color = document.getElementById('color').value;
     let t1 = performance.now();
     var points = iterateIFS(sys, iters, probs=probs);
     let t2 = performance.now();
-    drawPoints(points);
+    drawPoints(points, color);
     let t3 = performance.now();
     manipulator.update(sys, force);
     showSystemInfo(system);
@@ -214,16 +222,26 @@ function displayParams(sys=null) {
     document.getElementById('system-size').value = sys.length;
 }
 
-function drawPoints(points, region=null) {
+function drawPoints(points, color='black', region=null) {
     var can = document.getElementById('ifs-canvas');
     var ctx = can.getContext('2d');
+
+    let fg, bg;
+    if (color === 'black') {
+        fg = 0;
+        bg = 255;
+    } else if (color === 'white') {
+        fg = 255;
+        bg = 0;
+    }
 
     if (region === null)
         region = minmax(points);
 
     var w = can.width;
     var h = can.height;
-    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = bg === 0 ? 'black' : 'white';
+    ctx.fillRect(0, 0, w, h);
     let id = ctx.getImageData(0 ,0, w, h);
     let pix = id.data;
 
@@ -234,11 +252,11 @@ function drawPoints(points, region=null) {
         if (x >= 0 && x < w && y >= 0 && y < h) {
             // ar[y][x] = 1;
             let k = (y*w + x)*4;
-            if (pix[k+3] === 0) {
+            if (pix[k] === bg) {
                 count++;
-                pix[k] = 0;
-                pix[k+1] = 0;
-                pix[k+2] = 0;
+                pix[k] = fg;
+                pix[k+1] = fg;
+                pix[k+2] = fg;
                 pix[k+3] = 255;
             }
         }
