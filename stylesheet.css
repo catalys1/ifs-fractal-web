@@ -1,6 +1,10 @@
 body {
     display: flex;
     flex-direction: column;
+    width: 100%;
+    max-width: 1600px;
+    margin-left: auto;
+    margin-right: auto;
 }
 div {
     margin: 4px;
@@ -16,7 +20,15 @@ canvas.no-border {
 button {
     width: 99px;
     height: 29px;
+    background-color: #888888;
+    color: white;
+    border: none;
+    border-radius: 3px;
 }
+button:hover {
+    cursor: pointer;
+}
+
 .row {
     display: flex;
     flex-direction: row;
@@ -39,4 +51,17 @@ button {
     flex-direction: column;
     justify-content: flex-start;
     align-content: flex-start;
+}
+.ml {
+    margin-left: 5px;
+}
+.light {
+    color: #888888;
+}
+
+#system-size {
+    width: 3em;
+}
+#copy-notice {
+    color: green;
 }

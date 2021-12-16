@@ -33,35 +33,63 @@
         </span>
     </div>
     <div class='row'>
-        <div>
+        <div class='col'>
             <canvas id="ifs-canvas" height='400' width='400'> </canvas>
+            <div class='light'>Fractal display</div>
         </div>
-        <div>
+        <div class='col'>
             <canvas id='decomp-canvas' width=400 height=400></canvas>
+            <div class='light'>Fractal SVD manipulator</div>
         </div>
         <div>
-            <canvas id='info-canvas' class='no-border' width=400 height=400></canvas>
+            <canvas id='info-canvas' class='no-border' width=250 height=400></canvas>
         </div>
     </div>
 
     <div class='row'>
-        <div class='col'>
+        <div class='col' style="min-width: 400px;">
             <div class='header'>System parameters</div>
             <div class='row'>
                 <input id='system-size' type='number' min=2 max=16 value=2 oninput='changeSystemSize()'></input>
-                <label for='system-size' style="padding-left:10px;">Number of transforms</label>
+                <label for='system-size' style="padding-left:10px;">System size</label>
             </div>
-            <div class='row'>
+            <!-- <div class='row'>
                 <input id='step-size' type='number' min='0.01' max='0.5' value='0.1' step='0.01'>
                 </input>
                 <label for='step-size' style="padding-left:10px;">Step size</label>
-            </div>
+            </div> -->
             <div id='params' class='col'></div>
-            <button onclick="sampleRandomSystem()">Random</button>
+            <div class='row'>
+                <button onclick="sampleRandomSystem()">Random</button>
+                <button class="ml" onclick="copySystemJSON()">Copy</button>
+                <span class='ml' id='copy-notice'></span>
+            </div>
         </div>
         <div class='col'>
-            <textarea id='entry-field' name='entry-field' cols="50" rows="12" placeholder="Enter a system"></textarea>
+            <textarea id='entry-field' name='entry-field' cols="48" rows="12"
+                      placeholder="Enter a system (as JSON)"></textarea>
             <button id='submit-system' onclick="formSubmitSystem()">Submit</button>
+        </div>
+    </div>
+
+
+    <div class='col' style="border-top: solid black 1px">
+        <div style='font-size: 150%; font-weight: bold;'>Instructions</div>
+        <div class='col'>
+            <p style='font-size: 115%;'>
+            Use the fractal SVD manipulator pane to change the system SVD parameters.
+            Click and drag to manipulate the parameters.
+            <br>
+            The solid circular handles adjust the singular values&#x2014; <span style='color: red;'>red</span>
+            is the larger singular value (and associated vectors)
+            while <span style='color: blue;'>blue</span> is the smaller singular value.
+            <br>
+            Holding CTRL and clicking a singular value handle will flip the determinant.
+            <br>
+            The hollow circular handles change the singular vector orientation.
+            <br>
+            The central black hollow circle adjusts the position (translation vector).
+            </p>
         </div>
     </div>
 </div>
@@ -97,7 +125,7 @@ function predefinedSystem(name=null) {
         name = document.getElementById('systems').value;
     }
     if (predefined.hasOwnProperty(name)) {
-        system = predefined[name];
+        system = deepCopy(predefined[name]);
         displayParams();
         renderFractal(system);
     }
@@ -143,7 +171,8 @@ function createMatrixCard() {
         for (let j = 0; j < mat[i].length; j++) {
             var cell = document.createElement('input');
             cell.type = 'number';
-            cell.step = document.getElementById('step-size').value;
+            // cell.step = document.getElementById('step-size').value;
+            cell.step = 0.01;
             let notlast = j < mat[i].length - 1;
             cell.min = notlast ? '-1' : '-10';
             cell.max = notlast ? '1' : '10'
@@ -293,74 +322,76 @@ function showSystemInfo(sys=null) {
     if (sys === null) sys = system;
     var can = document.getElementById('info-canvas');
     var ctx = can.getContext('2d');
-    ctx.font = '10px courier';
+    ctx.font = '12px courier';
     ctx.fillStyle = 'black';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
     ctx.clearRect(0, 0, can.width, can.height);
 
-    let xoff = 5, yoff = 5, xspace = 75, yspace = 20;
+    let xoff = 5, yoff = 5, xspace = 65, yspace = 20;
 
-    ctx.fillText('Sigma1', xoff, yoff);
-    ctx.fillText('Sigma2', xoff+xspace, yoff);
-    ctx.fillText('det', xoff+2*xspace, yoff);
+    ctx.fillText('\u03c31', xoff, yoff);
+    ctx.fillText('\u03c32', xoff+xspace, yoff);
+    ctx.fillText('\u03b8', xoff+2*xspace, yoff);
+    ctx.fillText('\u03d5', xoff+3*xspace, yoff);
 
     ctx.beginPath();
     ctx.moveTo(0, yoff+yspace*2/3);
     ctx.lineTo(can.width, yoff+yspace*2/3);
     ctx.stroke();
+
+    function getAngle(mat) {
+        return Math.acos(mat[0][0]) * 180.0 / 3.14159 * Math.sign(mat[1][0]);
+    }
     
-    var mrps = 0;
-    var ms1 = 0;
-    var ms2 = 0;
     for (let i = 0; i < sys.length; i++) {
         let svd = manipulator.svd[i];
         let y = yoff+(i+1)*yspace;
-        ctx.fillText(svd.S[0].toPrecision(6), xoff, y);
-        ctx.fillText(svd.S[1].toPrecision(6), xoff+xspace, y);
-        ctx.fillText(det2x2(sys[i]).toPrecision(6), xoff+2*xspace, y);
-        let rps = Math.sqrt(svd.S[0] * svd.S[1])
-        mrps += rps;
-        ms1 += svd.S[0];
-        ms2 += svd.S[1];
+        ctx.fillText(svd.S[0].toPrecision(4), xoff, y);
+        ctx.fillText(svd.S[1].toPrecision(4), xoff+xspace, y);
+        ctx.fillText(getAngle(svd.U).toPrecision(4), xoff+2*xspace, y);
+        ctx.fillText(getAngle(svd.V).toPrecision(4), xoff+3*xspace, y);
     }
-    mrps = mrps / sys.length;
-    ms1 = ms1 / sys.length;
-    ms2 = ms2 / sys.length;
 
-    ctx.fillText('MRPS = '+mrps.toPrecision(6), 
-                 xoff, yoff + (sys.length + 2) * yspace);
-    ctx.fillText('MS1-MS2 = '+(ms1-ms2).toPrecision(6)+' = '+ms1.toPrecision(6)+' - '+ms2.toPrecision(6),
-                 xoff, yoff + (sys.length + 3) * yspace);
-    ctx.fillText('Fill rate: ' + fillRate.toPrecision(8),
-                 xoff, can.height-yspace);
+}
+
+function copySystemJSON() {
+    let text = JSON.stringify(system);
+    navigator.clipboard.writeText(text);
+    document.getElementById('copy-notice').innerHTML = 'copied';
+}
+
+function deepCopy(obj) {
+    return JSON.parse(JSON.stringify(obj));
 }
 
 function startup() {
     manipulator = new ManipulateDisplay(document.getElementById('decomp-canvas'), function(sys) {
         renderFractal(sys);
         displayParams(sys);
+        system = sys;
+        document.getElementById('copy-notice').innerHTML = '';
     });
-    system = predefined.fern;
+    system = deepCopy(predefined.fern);
     document.getElementById('systems').value = 'fern';
     displayParams();
 
-    var stepper = document.getElementById('step-size');
-    stepper.oninput = function(ev) {
-        var new_step = stepper.value;
-        var container = document.getElementById('params');
-        for (let i = 0; i < container.children.length; i++) {
-            var mat_els = container.children[i];
-            for (let j = 0; j < mat_els.children.length; j++) {
-                let row_els = mat_els.children[j];
-                for (let k = 0; k < row_els.children.length; k++) {
-                    row_els.children[k].step = new_step;
-                }
-            }
-        }
+    // var stepper = document.getElementById('step-size');
+    // stepper.oninput = function(ev) {
+    //     var new_step = stepper.value;
+    //     var container = document.getElementById('params');
+    //     for (let i = 0; i < container.children.length; i++) {
+    //         var mat_els = container.children[i];
+    //         for (let j = 0; j < mat_els.children.length; j++) {
+    //             let row_els = mat_els.children[j];
+    //             for (let k = 0; k < row_els.children.length; k++) {
+    //                 row_els.children[k].step = new_step;
+    //             }
+    //         }
+    //     }
 
-    }
+    // }
 
     renderFractal(system);
 }
